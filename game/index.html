@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1B2440">
-<title>Capi Rush: Ciclovia Livre — Bora Bike</title>
+<title>Capi Rush: Ciclovia Livre | Bora Bike</title>
 <style>
   @font-face { font-family: 'Fredoka'; font-weight: 700; src: url(fredoka-700.woff2) format('woff2'); }
   :root {
@@ -35,7 +35,7 @@
 'use strict';
 
 // ============================================================
-//  Capi Rush: Ciclovia Livre — advergame fictício da Bora Bike
+//  Capi Rush: Ciclovia Livre, advergame fictício da Bora Bike
 //  Arquivo único, sem sons nem imagens externas.
 //  As imagens em ../assets/ são opcionais: se não existirem,
 //  o jogo desenha versões provisórias no lugar.
@@ -94,7 +94,7 @@ const ASSETS = {
 };
 const SEM_CHROMA = new Set(['fundo', 'rua']);
 const ORDEM_ITENS = ['moeda', 'garrafa', 'cone', 'buraco', 'poca', 'passe'];
-const img = {};      // sprites prontos (canvas) — ausentes = desenho provisório
+const img = {};      // sprites prontos (canvas); ausentes = desenho provisório
 const itemImg = {};
 const botaoImg = [];
 
@@ -285,7 +285,7 @@ function capiFrente(t) {
   ctx.beginPath(); ctx.ellipse(0, 38, 34, 38, 0, 0, Math.PI * 2); ctx.fill(); contorno(3);
   // alças da mochila
   ctx.fillStyle = COR.azul; ctx.fillRect(-26, 4, 8, 44); ctx.fillRect(18, 4, 8, 44);
-  // desenho de roda na camiseta? não — "sem texto no corpo"; só detalhe laranja
+  // desenho de roda na camiseta? não, "sem texto no corpo"; só detalhe laranja
   ctx.fillStyle = COR.laranja; retArred(-10, 44, 20, 6, 3); ctx.fill();
   // pés
   ctx.fillStyle = '#8A5230';

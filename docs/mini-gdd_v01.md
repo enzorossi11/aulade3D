@@ -1,4 +1,4 @@
-# Mini-GDD — Capi Rush: Ciclovia Livre (v01)
+# Mini-GDD do Capi Rush: Ciclovia Livre (v01)
 
 **Cliente:** Bora Bike (fictícia) · **Produto:** Plano Mensal Estudante · **Plataforma:** navegador, celular em modo retrato
 
@@ -6,7 +6,7 @@
 A Capi, uma capivara estudante de capacete, pedala por uma rua de 3 faixas desviando de cones, buracos e poças, e quando pega o **Passe Mensal Bora** a rua vira **ciclovia livre**: sem obstáculos, mais rápida e com pontos em dobro.
 
 ## 2. Público e plataforma
-- Estudantes de 18–25 anos, no celular (ônibus, intervalo, fila).
+- Estudantes de 18 a 25 anos, no celular (ônibus, intervalo, fila).
 - Navegador (HTML5, arquivo único), modo retrato 9:16. Toque/deslize no celular; setas ← → ou A/D no computador.
 - Partida de **45 segundos**.
 
@@ -19,7 +19,7 @@ Olha o que está descendo → troca de faixa para **desviar** de um obstáculo �
 | Pedalar | +2 pontos por segundo |
 | Moeda Bora | +10 |
 | Garrafinha d'água | +5 |
-| Cone / buraco / poça | −15, sprite "ops" por 0,6 s, tremor leve na tela, 1 s de invencibilidade |
+| Cone / buraco / poça | -15, sprite "ops" por 0,6 s, tremor leve na tela, 1 s de invencibilidade |
 | Passe Mensal (máx. 3 por partida) | **Modo Ciclovia** por 5 s: pontos em dobro, obstáculos somem, velocidade +30%, borda verde brilhando e o texto "CICLOVIA LIBERADA!" |
 
 - **Curva de dificuldade:** começa com metade da velocidade e acelera até o máximo nos últimos 15 s.
@@ -58,10 +58,10 @@ Os PNGs desta entrega já saem com fundo transparente. O jogo também aceita spr
 ## 7. Telas
 - **Início:** fundo da cidade, logo no topo, Capi parada no centro, frase "Desvie, pegue o Passe e libere a ciclovia!", legenda dos itens, botão JOGAR, instruções de controle.
 - **Jogo:** HUD no topo (pontos à esquerda, tempo à direita), rua de 3 faixas rolando, Capi na parte de baixo.
-- **Fim:** pontuação grande, mensagem por faixa ("Bora de novo?" < 150 · "Mandou bem!" 150–300 · "Lenda da ciclovia!" > 300), cupom **BORAPEDALA** com a chamada para assinar o Plano Mensal Estudante no app, botões JOGAR DE NOVO e COMPARTILHAR (copia "Fiz [PONTOS] pontos no Capi Rush! Consegue me passar?"), rodapé de declaração de IA.
+- **Fim:** pontuação grande, mensagem por faixa ("Bora de novo?" < 150 · "Mandou bem!" 150 a 300 · "Lenda da ciclovia!" > 300), cupom **BORAPEDALA** com a chamada para assinar o Plano Mensal Estudante no app, botões JOGAR DE NOVO e COMPARTILHAR (copia "Fiz [PONTOS] pontos no Capi Rush! Consegue me passar?"), rodapé de declaração de IA.
 
 ## 8. Integração da marca
-- **Nível demonstrativo:** o Passe Mensal é o power-up e faz exatamente o que o plano promete — libera a ciclovia e deixa o caminho livre.
+- **Nível demonstrativo:** o Passe Mensal é o power-up e faz exatamente o que o plano promete: libera a ciclovia e deixa o caminho livre.
 - **Ilustrativo:** moedas com o símbolo da marca, bike e capacete na cor Laranja Bora.
 - **Associativo:** logo na tela inicial, paleta em todo o cenário e na interface.
 

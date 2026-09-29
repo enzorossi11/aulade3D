@@ -1,4 +1,4 @@
-# Relatório final — Capi Rush: Ciclovia Livre (Bora Bike)
+# Relatório final do Capi Rush: Ciclovia Livre (Bora Bike)
 
 ## 1. Resumo da campanha
 *Capi Rush* é um advergame de 45 segundos para celular, feito para a Bora Bike (marca fictícia) divulgar o Plano Mensal Estudante. A Capi, uma capivara estudante de capacete, pedala numa rua de 3 faixas desviando de cones, buracos e poças, e ao pegar o Passe Mensal a rua vira ciclovia livre. Na tela final o jogador recebe o código BORAPEDALA para assinar o plano no app.
@@ -30,14 +30,14 @@ O que mudaria depois do teste: `[PREENCHER]`
 | Etapa | Ferramenta | Estimado na aula | Real |
 |---|---|---|---|
 | Conceitos e mini-GDD | Assistente de IA | 2 prompts de texto | 2 prompts |
-| Ficha do mascote | Assistente de IA | — | 1 |
-| Exploração + model sheet | Nano Banana / Pro | 2–4 imagens | 0 imagens (SVG em código, 1 versão + 2 correções) |
-| 5 estados | Nano Banana | 5–7 imagens | 0 imagens (SVG, junto com a model sheet) |
-| Cenário (2 camadas) | Nano Banana | 2–3 | 0 imagens (SVG, 1 versão) |
-| Folha de itens | Nano Banana | 1–2 | 0 imagens (SVG, 1 versão) |
-| Logo + botões | Nano Banana Pro | 2–3 | 0 imagens (SVG, 1 versão) |
-| Jogo + correções + game feel | AI Studio | 8–15 iterações | 6 iterações (assistente de IA) |
-| Key art | Nano Banana Pro | 1–2 | 0 imagens (SVG, 1 versão + 1 correção) |
+| Ficha do mascote | Assistente de IA | não previsto | 1 |
+| Exploração + model sheet | Nano Banana / Pro | 2 a 4 imagens | 0 imagens (SVG em código, 1 versão + 2 correções) |
+| 5 estados | Nano Banana | 5 a 7 imagens | 0 imagens (SVG, junto com a model sheet) |
+| Cenário (2 camadas) | Nano Banana | 2 a 3 | 0 imagens (SVG, 1 versão) |
+| Folha de itens | Nano Banana | 1 a 2 | 0 imagens (SVG, 1 versão) |
+| Logo + botões | Nano Banana Pro | 2 a 3 | 0 imagens (SVG, 1 versão) |
+| Jogo + correções + game feel | AI Studio | 8 a 15 iterações | 6 iterações (assistente de IA) |
+| Key art | Nano Banana Pro | 1 a 2 | 0 imagens (SVG, 1 versão + 1 correção) |
 | Teaser (opcional) | Veo 3.1 | 1 | não feito |
 | **Total de gerações de imagem** | | **~15 a 23** | **0**: 12 PNGs exportados de código, com 3 rodadas de correção |
 
@@ -57,6 +57,6 @@ Custo de produção: nenhum crédito de geração de imagem. Como o desenho é v
 | Mini-GDD, ficha e prompts | Assistente de IA | Redigiu o mini-GDD, a ficha travada e os prompts | Aprovação da mascote, paleta e regras |
 | Imagens (mascote, cenário, itens, UI, key art) | Assistente de IA | Desenhou todas as imagens como ilustração vetorial em código (SVG) e exportou os PNGs | Aprovação da arte |
 | Código do jogo | Assistente de IA | Escreveu o HTML5/JavaScript e testou em navegador automatizado | Testes no celular e com usuários |
-| Fonte tipográfica | — (não é IA) | Fredoka, licença SIL Open Font License | |
+| Fonte tipográfica | Não é IA | Fredoka, licença SIL Open Font License | |
 
 Todas as marcas, produtos e códigos promocionais são fictícios e foram criados para fins educacionais. O jogo não coleta nenhum dado pessoal e guarda o recorde só na memória da sessão.

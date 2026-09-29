@@ -1,4 +1,4 @@
-// Arte vetorial (SVG) de todos os assets do Capi Rush — Bora Bike.
+// Arte vetorial (SVG) de todos os assets do Capi Rush (Bora Bike).
 // Segue a ficha travada em prompts/ficha_mascote_capi.md.
 // Gerar os PNGs: node assets/_fonte_svg/renderizar.mjs
 

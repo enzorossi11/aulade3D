@@ -1,9 +1,9 @@
-# Ficha travada — Capi (Bora Bike)
+# Ficha travada da Capi (Bora Bike)
 
 Copie e cole este bloco **idêntico** em todos os prompts do mascote. Não reescreva, não resuma.
 
 ```
-FICHA DO MASCOTE — CAPI (Bora Bike)
+FICHA DO MASCOTE: CAPI (Bora Bike)
 Espécie: capivara jovem, estilizada, estudante universitária
 Corpo: arredondado e robusto, proporção de 2,5 cabeças de altura
 Pelagem: marrom caramelo, focinho largo marrom mais escuro, orelhas pequenas e redondas

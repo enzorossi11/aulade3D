@@ -1,4 +1,4 @@
-# Log de prompts — Capi Rush (Bora Bike)
+# Log de prompts do Capi Rush (Bora Bike)
 
 > ✅ **Como os assets foram feitos nesta entrega:** todas as imagens foram desenhadas como **ilustração vetorial em código (SVG)**, com auxílio de assistente de IA, seguindo a ficha travada, e convertidas para PNG. O código-fonte editável está em `assets/_fonte_svg/` (`arte.mjs` desenha, `renderizar.mjs` exporta). Como é desenho vetorial, a ficha não "escorrega" entre os sprites: todos reutilizam as mesmas peças (capacete, mochila, pelagem).
 >
@@ -12,15 +12,15 @@ Onde está escrito `[FICHA]`, cole o bloco completo de `prompts/ficha_mascote_ca
 
 ---
 
-## Prompt 01 — Conceitos (assistente de texto) ✅ feito
+## Prompt 01: Conceitos (assistente de texto) ✅ feito
 Prompt 01 da aula, com o briefing de `briefing/briefing_bora-bike.md` e a minha ideia inicial ("bike em 3 faixas desviando de obstáculos"). Resultado em `briefing/conceitos_v01.md`.
 
-## Prompt 02 — Mini-GDD (assistente de texto) ✅ feito
+## Prompt 02: Mini-GDD (assistente de texto) ✅ feito
 Prompt 02 da aula com o conceito "Capi Rush". Resultado em `docs/mini-gdd_v01.md`.
 
 ---
 
-## Prompt 03 — Exploração, 3 variações (Nano Banana Flash)
+## Prompt 03: Exploração, 3 variações (Nano Banana Flash)
 ```
 [FICHA]
 
@@ -34,7 +34,7 @@ Fundo branco liso. Sem texto. Personagem inteiro visível.
 ```
 ➡️ Escolha uma das três e anote abaixo **por que** escolheu.
 
-## Prompt 04 — Model sheet (Nano Banana Pro)
+## Prompt 04: Model sheet (Nano Banana Pro)
 Anexe a variação escolhida.
 ```
 [FICHA]
@@ -50,7 +50,7 @@ Mantenha exatamente as cores, o capacete e a mochila.
 
 **Checagem antes de seguir:** capacete laranja com faixa branca e roda ☐ · pelagem caramelo ☐ · camiseta branca ☐ · mochila azul noite ☐ · nada verde no personagem ☐ · mesma proporção nas 4 vistas ☐
 
-## Prompt 05 — Estados por edição (Nano Banana Flash)
+## Prompt 05: Estados por edição (Nano Banana Flash)
 Anexe a **model sheet** e gere **um estado por vez**:
 ```
 [FICHA]
@@ -75,7 +75,7 @@ Imagem quadrada. Não altere cores, capacete, mochila ou proporções.
 
 ⚠️ Os estados do jogo são **de costas**, porque a câmera fica atrás da bike. Só o "parado" (tela inicial) é de frente.
 
-## Prompt 06 — Camada de fundo: cidade vista de cima (Nano Banana Flash)
+## Prompt 06: Camada de fundo: cidade vista de cima (Nano Banana Flash)
 ```
 Ilustração 2D vetorial para fundo de jogo mobile em modo retrato (9:16),
 vista de cima (top-down) de uma rua de bairro universitário de São Paulo:
@@ -90,7 +90,7 @@ Sem personagens, sem carros, sem texto, sem logos.
 ```
 💾 `cenario_cidade_fundo_v01.png`
 
-## Prompt 07 — Camada da rua (Nano Banana Flash)
+## Prompt 07: Camada da rua (Nano Banana Flash)
 ```
 Faixa vertical de asfalto vista de cima (top-down) em ilustração 2D vetorial,
 cinza azulado escuro (#1B2440 clareado), dividida em 3 faixas por linhas
@@ -101,7 +101,7 @@ Mesmo estilo do fundo anexado.
 ```
 💾 `cenario_rua_chao_v01.png`
 
-## Prompt 08 — Folha de itens (Nano Banana Flash)
+## Prompt 08: Folha de itens (Nano Banana Flash)
 Anexe a model sheet.
 ```
 Folha de itens para jogo mobile vistos de cima, ilustração 2D vetorial,
@@ -125,7 +125,7 @@ Nenhum item pode ter verde.
 ```
 💾 `itens_folha_v01.png`
 
-## Prompt 09 — Logo e botões (Nano Banana Pro)
+## Prompt 09: Logo e botões (Nano Banana Pro)
 ```
 Logotipo para a marca fictícia "Bora Bike": a palavra BORA em letras
 arredondadas e grossas laranja (#FF6B1A), a palavra BIKE embaixo em
@@ -145,7 +145,7 @@ Texto legível, exatamente como escrito. Fundo verde chroma #00FF00.
 ```
 💾 `ui_botoes_v01.png`
 
-## Prompt 10 — O jogo
+## Prompt 10: O jogo
 O jogo já está montado em `game/index.html` e **carrega automaticamente** os arquivos acima de `assets/` com esses nomes exatos, removendo o fundo verde. Até as imagens chegarem, ele usa desenhos provisórios.
 
 Se o professor exigir a montagem no AI Studio, este é o prompt equivalente:
@@ -197,7 +197,7 @@ sons nem imagens externas; guarde o recorde apenas na memória da sessão;
 a Capi está sempre de capacete; não mostre carros nem situações de risco no trânsito.
 ```
 
-## Prompt 12 — Key art (Nano Banana Pro)
+## Prompt 12: Key art (Nano Banana Pro)
 Anexos: `mascote_capi_modelsheet_v01.png`, `cenario_cidade_fundo_v01.png`, `itens_folha_v01.png`, `ui_logo_bora-bike_v01.png`
 ```
 Crie a key art de divulgação de um jogo mobile, formato vertical 4:5 para
@@ -213,7 +213,7 @@ Escreva exatamente os textos entre aspas.
 ```
 💾 `divulgacao/divulgacao_keyart_v01.png`
 
-## Extra opcional — Teaser de 8 s (Veo 3.1)
+## Extra opcional: Teaser de 8 s (Veo 3.1)
 Só depois do jogo e da key art aprovados. Anexe a key art.
 ```
 Anime a imagem anexada: câmera se aproxima lentamente da mascote,
