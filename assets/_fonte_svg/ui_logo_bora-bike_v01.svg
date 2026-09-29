@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">
+    <text x="118" y="190" font-family="Fredoka" font-weight="700" font-size="190" fill="#FF6B1A" stroke="#1B2440" stroke-width="22" paint-order="stroke" stroke-linejoin="round">B</text>
+    <circle cx="316" cy="124" r="62" fill="#1B2440"/>
+    <circle cx="316" cy="124" r="50" fill="none" stroke="#FF6B1A" stroke-width="15"/><line x1="266" y1="124" x2="366" y2="124" stroke="#FF6B1A" stroke-width="9" stroke-linecap="round"/><line x1="291" y1="80.69872981077808" x2="341" y2="167.30127018922192" stroke="#FF6B1A" stroke-width="9" stroke-linecap="round"/><line x1="341" y1="80.69872981077806" x2="291" y2="167.30127018922195" stroke="#FF6B1A" stroke-width="9" stroke-linecap="round"/><circle cx="316" cy="124" r="12" fill="#FF6B1A"/>
+    <text x="392" y="190" font-family="Fredoka" font-weight="700" font-size="190" fill="#FF6B1A" stroke="#1B2440" stroke-width="22" paint-order="stroke" stroke-linejoin="round">RA</text>
+    <text x="400" y="352" text-anchor="middle" font-family="Fredoka" font-weight="700" font-size="150" letter-spacing="14" fill="#F2F0EA" stroke="#1B2440" stroke-width="20" paint-order="stroke" stroke-linejoin="round">BIKE</text></svg>

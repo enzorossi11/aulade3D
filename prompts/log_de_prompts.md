@@ -1,5 +1,9 @@
 # Log de prompts — Capi Rush (Bora Bike)
 
+> ✅ **Como os assets foram feitos nesta entrega:** todas as imagens foram desenhadas pelo Claude como **ilustração vetorial em código (SVG)**, seguindo a ficha travada, e convertidas para PNG. O código-fonte editável está em `assets/_fonte_svg/` (`arte.mjs` desenha, `renderizar.mjs` exporta). Como é desenho vetorial, a ficha não "escorrega" entre os sprites: todos reutilizam as mesmas peças (capacete, mochila, pelagem).
+>
+> Os prompts de Nano Banana abaixo ficam como **alternativa**: se o professor exigir imagens do Gemini, é só rodar na ordem e salvar por cima com os mesmos nomes (ou como `v02`). O jogo carrega qualquer um dos dois.
+
 Como usar: rode os prompts **na ordem**, salve cada imagem com o nome exato indicado e anote cada geração na tabela do fim (ela vira o orçamento do relatório).
 
 Onde está escrito `[FICHA]`, cole o bloco completo de `prompts/ficha_mascote_capi.md`.
@@ -223,12 +227,16 @@ Mantenha exatamente o estilo, as cores e os textos da imagem.
 
 ---
 
-## Registro de gerações (preencher enquanto gera)
+## Registro de gerações
 
-| # | Prompt | Ferramenta | Resultado / arquivo | Aprovado? | Observação (por que refez, o que corrigiu) |
+| # | Etapa | Ferramenta | Resultado / arquivo | Iterações | Observação |
 |---|---|---|---|---|---|
-| 1 | 01 Conceitos | Claude | `briefing/conceitos_v01.md` | ✅ | Escolhido o conceito A (demonstrativo) |
-| 2 | 02 Mini-GDD | Claude | `docs/mini-gdd_v01.md` | ✅ | |
-| 3 | 03 Exploração | Nano Banana | | | Escolhi a variação __ porque... |
-| 4 | 04 Model sheet | Nano Banana Pro | | | |
-| 5 | | | | | |
+| 1 | 01 Conceitos | Claude | `briefing/conceitos_v01.md` | 1 | Escolhido o conceito A (demonstrativo) a partir da ideia do aluno (bike em 3 faixas) |
+| 2 | 02 Mini-GDD | Claude | `docs/mini-gdd_v01.md` | 1 | |
+| 3 | Ficha travada | Claude | `prompts/ficha_mascote_capi.md` | 1 | Capivara (bicho urbano de SP), capacete fixo, nada verde no personagem por causa do chroma |
+| 4 | Model sheet + 5 estados | Claude (SVG) | `assets/mascote_capi_*` | 3 | v1 → as entradas de ar do capacete, vistas de costas, pareciam olhos (removidas); a faixa do capacete no perfil flutuava e o focinho do perfil tinha uma mancha (corrigidos) |
+| 5 | Cenário (2 camadas) | Claude (SVG) | `assets/cenario_*` | 1 | Repetível na vertical; o vão da rua bate com a camada da rua |
+| 6 | Folha de itens | Claude (SVG) | `assets/itens_folha_v01.png` | 1 | Grade 3x2 na ordem do mini-GDD, fundo transparente |
+| 7 | Logo + botões | Claude (SVG) + fonte Fredoka | `assets/ui_*` | 1 | Roda da marca no lugar do "O" |
+| 8 | Key art 4:5 | Claude (SVG) | `divulgacao/divulgacao_keyart_v01.png` | 2 | O cone encostava no rodapé (reposicionado) |
+| 9 | Jogo | Claude (código) | `game/index.html` | 6 | Ver "O que deu errado" no relatório |

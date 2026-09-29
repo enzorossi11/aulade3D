@@ -53,7 +53,7 @@ A inclinação ao trocar de faixa é feita no código (rotação), não precisa 
 | `ui_botoes_v01.png` | Botões JOGAR / JOGAR DE NOVO / COMPARTILHAR |
 | `divulgacao_keyart_v01.png` | Key art 4:5 (pasta `divulgacao/`) |
 
-Todos os sprites com fundo verde chroma `#00FF00` (o jogo remove essa cor).
+Os PNGs desta entrega já saem com fundo transparente. O jogo também aceita sprites com fundo verde chroma `#00FF00` (caso sejam regerados no Nano Banana) e remove essa cor sozinho.
 
 ## 7. Telas
 - **Início:** fundo da cidade, logo no topo, Capi parada no centro, frase "Desvie, pegue o Passe e libere a ciclovia!", legenda dos itens, botão JOGAR, instruções de controle.

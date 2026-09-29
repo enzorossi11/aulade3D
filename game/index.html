@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#1B2440">
 <title>Capi Rush: Ciclovia Livre — Bora Bike</title>
 <style>
+  @font-face { font-family: 'Fredoka'; font-weight: 700; src: url(fredoka-700.woff2) format('woff2'); }
   :root {
     --laranja: #FF6B1A;
     --azul: #1B2440;
@@ -41,7 +42,7 @@
 // ============================================================
 
 const COR = { laranja: '#FF6B1A', azul: '#1B2440', verde: '#22B573', branco: '#F2F0EA' };
-const FONTE = "'Arial Rounded MT Bold','Nunito','Trebuchet MS',system-ui,sans-serif";
+const FONTE = "'Fredoka','Arial Rounded MT Bold','Nunito','Trebuchet MS',system-ui,sans-serif";
 
 // ---------- Regras (mini-GDD, seção 4) ----------
 const DURACAO = 45;           // s
@@ -783,7 +784,7 @@ function rodape(y) {
 
 function telaInicio() {
   ctx.fillStyle = 'rgba(27,36,64,.55)'; ctx.fillRect(0, 0, W, H);
-  desenharLogo(W / 2, 78, 220, 100);
+  desenharLogo(W / 2, 70, 200, 90);
   texto('CAPI RUSH', W / 2, 150, 34, COR.laranja);
   texto('Ciclovia Livre', W / 2, 180, 18, COR.branco);
 
@@ -961,7 +962,7 @@ function laco(agora) {
   requestAnimationFrame(laco);
 }
 
-carregarTudo().then(() => {
+Promise.all([carregarTudo(), document.fonts.load("700 20px 'Fredoka'").catch(() => {})]).then(() => {
   montarBotoes();
   requestAnimationFrame(t => { ultimo = t; laco(t); });
 });
