@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1B2440">
+<title>Capi Rush: Ciclovia Livre — Bora Bike</title>
+<style>
+  :root {
+    --laranja: #FF6B1A;
+    --azul: #1B2440;
+    --verde: #22B573;
+    --branco: #F2F0EA;
+  }
+  html, body {
+    margin: 0; height: 100%; background: var(--azul);
+    overflow: hidden; touch-action: none; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; background: #2B3556; box-shadow: 0 0 40px rgba(0,0,0,.4); }
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--branco); color: var(--azul); padding: 10px 18px; border-radius: 999px;
+    font: 700 14px system-ui, sans-serif; opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="toast"></div>
+<script>
+'use strict';
+
+// ============================================================
+//  Capi Rush: Ciclovia Livre — advergame fictício da Bora Bike
+//  Arquivo único, sem sons nem imagens externas.
+//  As imagens em ../assets/ são opcionais: se não existirem,
+//  o jogo desenha versões provisórias no lugar.
+// ============================================================
+
+const COR = { laranja: '#FF6B1A', azul: '#1B2440', verde: '#22B573', branco: '#F2F0EA' };
+const FONTE = "'Arial Rounded MT Bold','Nunito','Trebuchet MS',system-ui,sans-serif";
+
+// ---------- Regras (mini-GDD, seção 4) ----------
+const DURACAO = 45;           // s
+const VEL_MAX = 470;          // px/s na velocidade cheia
+const RAMPA_ATE = DURACAO - 15; // chega na velocidade máxima faltando 15 s
+const PONTOS_SEG = 2;
+const PONTOS = { moeda: 10, garrafa: 5, obstaculo: -15 };
+const CICLOVIA_DUR = 5;
+const CICLOVIA_VEL = 1.3;
+const MAX_PASSES = 3;
+const CODIGO = 'BORAPEDALA';
+
+// ---------- Layout lógico (9:16) ----------
+const W = 360, H = 640;
+const RUA_X = 72, RUA_W = 216, FAIXA_W = RUA_W / 3;
+const faixaX = i => RUA_X + FAIXA_W * (i + 0.5);
+const JOGADOR_Y = 540;
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let escala = 1;
+
+function redimensionar() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  escala = Math.min(window.innerWidth / W, window.innerHeight / H);
+  canvas.style.width = Math.floor(W * escala) + 'px';
+  canvas.style.height = Math.floor(H * escala) + 'px';
+  canvas.width = Math.floor(W * escala * dpr);
+  canvas.height = Math.floor(H * escala * dpr);
+  ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+}
+window.addEventListener('resize', redimensionar);
+redimensionar();
+
+// ============================================================
+//  Assets (nomes exatos do mini-GDD, seção 6)
+// ============================================================
+const ASSETS = {
+  parado:   'mascote_capi_estado-parado_v01.png',
+  pedalar:  'mascote_capi_estado-pedalar_v01.png',
+  pegar:    'mascote_capi_estado-pegar_v01.png',
+  ops:      'mascote_capi_estado-ops_v01.png',
+  ciclovia: 'mascote_capi_estado-ciclovia_v01.png',
+  fundo:    'cenario_cidade_fundo_v01.png',
+  rua:      'cenario_rua_chao_v01.png',
+  itens:    'itens_folha_v01.png',
+  logo:     'ui_logo_bora-bike_v01.png',
+  botoes:   'ui_botoes_v01.png',
+};
+const SEM_CHROMA = new Set(['fundo', 'rua']);
+const ORDEM_ITENS = ['moeda', 'garrafa', 'cone', 'buraco', 'poca', 'passe'];
+const img = {};      // sprites prontos (canvas) — ausentes = desenho provisório
+const itemImg = {};
+const botaoImg = [];
+
+function carregar(chave, arquivo) {
+  return new Promise(ok => {
+    const im = new Image();
+    im.onload = () => {
+      img[chave] = SEM_CHROMA.has(chave) ? im : removerVerde(im);
+      ok();
+    };
+    im.onerror = () => ok();
+    im.src = '../assets/' + arquivo;
+  });
+}
+
+// Chroma key #00FF00. Mantém o verde da marca (#22B573), que tem azul alto.
+function removerVerde(im) {
+  const c = document.createElement('canvas');
+  c.width = im.naturalWidth; c.height = im.naturalHeight;
+  const g2 = c.getContext('2d');
+  g2.drawImage(im, 0, 0);
+  try {
+    const dados = g2.getImageData(0, 0, c.width, c.height);
+    const p = dados.data;
+    for (let i = 0; i < p.length; i += 4) {
+      const r = p[i], g = p[i + 1], b = p[i + 2];
+      const m = Math.max(r, b);
+      if (g > 140 && g > m * 1.6) {
+        p[i + 3] = 0;
+      } else if (g > 90 && m < 110 && g > m * 1.3) {
+        // borda serrilhada: tira o verde e deixa semitransparente
+        p[i + 3] = Math.round(p[i + 3] * (1 - (g - m) / g));
+        p[i + 1] = m;
+      }
+    }
+    g2.putImageData(dados, 0, 0);
+  } catch (e) {
+    // Aberto via file:// o navegador bloqueia getImageData. Usa a imagem crua.
+  }
+  return c;
+}
+
+// Recorta as bordas transparentes (itens e botões ficam do mesmo tamanho visual)
+function aparar(c) {
+  try {
+    const g2 = c.getContext('2d');
+    const p = g2.getImageData(0, 0, c.width, c.height).data;
+    let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+    for (let y = 0; y < c.height; y++) {
+      for (let x = 0; x < c.width; x++) {
+        if (p[(y * c.width + x) * 4 + 3] > 24) {
+          if (x < x0) x0 = x; if (x > x1) x1 = x;
+          if (y < y0) y0 = y; if (y > y1) y1 = y;
+        }
+      }
+    }
+    if (x1 < 0) return c;
+    const out = document.createElement('canvas');
+    out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+    out.getContext('2d').drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+    return out;
+  } catch (e) { return c; }
+}
+
+function fatiar(fonte, colunas, linhas) {
+  const w = fonte.width / colunas, h = fonte.height / linhas, pedacos = [];
+  for (let l = 0; l < linhas; l++) {
+    for (let k = 0; k < colunas; k++) {
+      const c = document.createElement('canvas');
+      c.width = Math.round(w); c.height = Math.round(h);
+      c.getContext('2d').drawImage(fonte, k * w, l * h, w, h, 0, 0, c.width, c.height);
+      pedacos.push(aparar(c));
+    }
+  }
+  return pedacos;
+}
+
+async function carregarTudo() {
+  await Promise.all(Object.entries(ASSETS).map(([k, a]) => carregar(k, a)));
+  if (img.itens) fatiar(img.itens, 3, 2).forEach((c, i) => { itemImg[ORDEM_ITENS[i]] = c; });
+  if (img.botoes) fatiar(img.botoes, 1, 3).forEach(c => botaoImg.push(c));
+  if (img.logo) img.logo = aparar(img.logo);
+}
+
+function desenharAjustado(im, cx, cy, maxW, maxH) {
+  const s = Math.min(maxW / im.width, maxH / im.height);
+  const w = im.width * s, h = im.height * s;
+  ctx.drawImage(im, cx - w / 2, cy - h / 2, w, h);
+}
+
+// ============================================================
+//  Desenhos provisórios (substituídos pelos PNGs quando existirem)
+// ============================================================
+function retArred(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function contorno(larg = 2.5) { ctx.lineWidth = larg; ctx.strokeStyle = COR.azul; ctx.stroke(); }
+
+function desenharRoda(x, y, r) {
+  ctx.save();
+  ctx.strokeStyle = COR.branco; ctx.lineWidth = r * 0.22;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.lineWidth = r * 0.12;
+  for (let a = 0; a < 3; a++) {
+    const ang = a * Math.PI / 3;
+    ctx.beginPath();
+    ctx.moveTo(x - Math.cos(ang) * r, y - Math.sin(ang) * r);
+    ctx.lineTo(x + Math.cos(ang) * r, y + Math.sin(ang) * r);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Capi de costas, na bike (visão do jogo)
+function capiCostas(estado, t) {
+  const balanco = estado === 'ops' ? Math.sin(t * 40) * 0.2 : 0;
+  const pulo = estado === 'pegar' ? -8 : 0;
+  ctx.save();
+  ctx.rotate(balanco);
+  ctx.translate(0, pulo);
+  if (estado === 'ciclovia') {
+    ctx.save();
+    ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 20);
+    ctx.fillStyle = COR.laranja;
+    ctx.beginPath(); ctx.ellipse(0, 0, 38, 52, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  // roda da frente (em cima) e de trás (embaixo)
+  const giro = Math.sin(t * 30) * 2;
+  ctx.fillStyle = COR.azul;
+  retArred(-5, -46 + giro, 10, 24, 5); ctx.fill();
+  retArred(-6, 20 - giro, 12, 26, 6); ctx.fill();
+  // quadro
+  ctx.fillStyle = COR.laranja;
+  retArred(-4, -30, 8, 56, 4); ctx.fill(); contorno(1.5);
+  // guidão
+  ctx.strokeStyle = COR.azul; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-18, -26); ctx.lineTo(18, -26); ctx.stroke();
+  // braços
+  ctx.fillStyle = '#A8683F';
+  ctx.beginPath(); ctx.ellipse(-15, -14, 5, 13, 0.25, 0, Math.PI * 2); ctx.fill(); contorno(1.5);
+  ctx.beginPath(); ctx.ellipse(15, -14, 5, 13, -0.25, 0, Math.PI * 2); ctx.fill(); contorno(1.5);
+  if (estado === 'pegar') { // pata para cima comemorando
+    ctx.beginPath(); ctx.ellipse(22, -30, 5, 12, -0.6, 0, Math.PI * 2); ctx.fill(); contorno(1.5);
+  }
+  // corpo + camiseta
+  ctx.fillStyle = COR.branco;
+  ctx.beginPath(); ctx.ellipse(0, 4, 19, 22, 0, 0, Math.PI * 2); ctx.fill(); contorno();
+  // mochila
+  ctx.fillStyle = COR.azul;
+  retArred(-12, -6, 24, 26, 7); ctx.fill();
+  ctx.fillStyle = COR.laranja; retArred(-7, 8, 14, 5, 2); ctx.fill();
+  // cabeça (nuca) + capacete
+  ctx.fillStyle = '#A8683F';
+  ctx.beginPath(); ctx.ellipse(0, -18, 13, 12, 0, 0, Math.PI * 2); ctx.fill(); contorno();
+  ctx.fillStyle = COR.laranja;
+  ctx.beginPath(); ctx.ellipse(0, -21, 14, 11, 0, 0, Math.PI * 2); ctx.fill(); contorno();
+  ctx.fillStyle = COR.branco; ctx.fillRect(-2, -31, 4, 20);
+  // orelhinhas
+  ctx.fillStyle = '#8A5230';
+  ctx.beginPath(); ctx.arc(-12, -14, 3.5, 0, Math.PI * 2); ctx.arc(12, -14, 3.5, 0, Math.PI * 2); ctx.fill();
+  if (estado === 'ops') {
+    ctx.strokeStyle = COR.branco; ctx.lineWidth = 2;
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s * 24, -30); ctx.lineTo(s * 30, -38); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(s * 26, -22); ctx.lineTo(s * 34, -24); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// Capi de frente (tela inicial)
+function capiFrente(t) {
+  const resp = Math.sin(t * 3) * 1.5;
+  ctx.save();
+  ctx.translate(0, resp);
+  // corpo e camiseta
+  ctx.fillStyle = '#A8683F';
+  ctx.beginPath(); ctx.ellipse(0, 30, 44, 50, 0, 0, Math.PI * 2); ctx.fill(); contorno(3);
+  ctx.fillStyle = COR.branco;
+  ctx.beginPath(); ctx.ellipse(0, 38, 34, 38, 0, 0, Math.PI * 2); ctx.fill(); contorno(3);
+  // alças da mochila
+  ctx.fillStyle = COR.azul; ctx.fillRect(-26, 4, 8, 44); ctx.fillRect(18, 4, 8, 44);
+  // desenho de roda na camiseta? não — "sem texto no corpo"; só detalhe laranja
+  ctx.fillStyle = COR.laranja; retArred(-10, 44, 20, 6, 3); ctx.fill();
+  // pés
+  ctx.fillStyle = '#8A5230';
+  ctx.beginPath(); ctx.ellipse(-20, 80, 14, 7, 0, 0, Math.PI * 2); ctx.ellipse(20, 80, 14, 7, 0, 0, Math.PI * 2); ctx.fill();
+  // cabeça
+  ctx.fillStyle = '#A8683F';
+  ctx.beginPath(); ctx.ellipse(0, -30, 40, 32, 0, 0, Math.PI * 2); ctx.fill(); contorno(3);
+  // focinho
+  ctx.fillStyle = '#7A4526';
+  retArred(-24, -26, 48, 28, 14); ctx.fill(); contorno(2.5);
+  ctx.fillStyle = COR.azul;
+  ctx.beginPath(); ctx.ellipse(-8, -16, 3, 4, 0, 0, Math.PI * 2); ctx.ellipse(8, -16, 3, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = COR.azul; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-6, -6); ctx.quadraticCurveTo(4, -1, 12, -8); ctx.stroke(); // sorriso de canto
+  // olhos tranquilos
+  const pisca = (t % 4) < 0.12 ? 0.2 : 1;
+  ctx.fillStyle = COR.azul;
+  ctx.beginPath(); ctx.ellipse(-20, -38, 4, 5 * pisca, 0, 0, Math.PI * 2); ctx.ellipse(20, -38, 4, 5 * pisca, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-27, -48); ctx.lineTo(-13, -46); ctx.moveTo(27, -48); ctx.lineTo(13, -46); ctx.stroke();
+  // orelhas
+  ctx.fillStyle = '#8A5230';
+  ctx.beginPath(); ctx.arc(-34, -52, 7, 0, Math.PI * 2); ctx.arc(34, -52, 7, 0, Math.PI * 2); ctx.fill();
+  // capacete (sempre!)
+  ctx.fillStyle = COR.laranja;
+  ctx.beginPath(); ctx.ellipse(0, -56, 38, 22, 0, Math.PI, 0); ctx.closePath(); ctx.fill(); contorno(3);
+  ctx.fillStyle = COR.branco; ctx.fillRect(-4, -77, 8, 21);
+  ctx.save(); ctx.translate(20, -66); desenharRoda(0, 0, 6); ctx.restore();
+  // fivela
+  ctx.strokeStyle = COR.azul; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-36, -56); ctx.lineTo(-30, -14); ctx.moveTo(36, -56); ctx.lineTo(30, -14); ctx.stroke();
+  ctx.restore();
+}
+
+function itemProvisorio(tipo, t) {
+  ctx.save();
+  switch (tipo) {
+    case 'moeda': {
+      const s = Math.abs(Math.cos(t * 4));
+      ctx.scale(0.35 + 0.65 * s, 1);
+      ctx.fillStyle = '#F5B82E';
+      ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.fill(); contorno();
+      ctx.save(); ctx.globalAlpha = .9; desenharRoda(0, 0, 8); ctx.restore();
+      break;
+    }
+    case 'garrafa':
+      ctx.fillStyle = '#4FA3E0';
+      retArred(-9, -14, 18, 30, 6); ctx.fill(); contorno();
+      ctx.fillStyle = COR.azul; retArred(-5, -20, 10, 7, 2); ctx.fill();
+      ctx.fillStyle = COR.branco; ctx.fillRect(-9, -2, 18, 6);
+      break;
+    case 'cone':
+      ctx.fillStyle = COR.laranja;
+      ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(15, 16); ctx.lineTo(-15, 16); ctx.closePath(); ctx.fill(); contorno();
+      ctx.fillStyle = COR.branco;
+      ctx.beginPath(); ctx.moveTo(-7, -3); ctx.lineTo(7, -3); ctx.lineTo(9.5, 4); ctx.lineTo(-9.5, 4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = COR.azul; retArred(-20, 14, 40, 6, 3); ctx.fill();
+      break;
+    case 'buraco':
+      ctx.fillStyle = '#10162A';
+      ctx.beginPath(); ctx.ellipse(0, 0, 22, 14, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#5A6488'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-22, 0); ctx.lineTo(-30, -6); ctx.moveTo(20, 4); ctx.lineTo(29, 10); ctx.moveTo(4, -14); ctx.lineTo(8, -21); ctx.stroke();
+      break;
+    case 'poca':
+      ctx.fillStyle = '#3F86C9';
+      ctx.beginPath(); ctx.ellipse(0, 0, 24, 13, 0, 0, Math.PI * 2); ctx.fill(); contorno(2);
+      ctx.fillStyle = 'rgba(242,240,234,.7)';
+      ctx.beginPath(); ctx.ellipse(-8, -4, 8, 3, -0.2, 0, Math.PI * 2); ctx.fill();
+      break;
+    case 'passe': {
+      const pulso = 1 + Math.sin(t * 8) * 0.07;
+      ctx.scale(pulso, pulso);
+      ctx.shadowColor = COR.verde; ctx.shadowBlur = 16;
+      ctx.fillStyle = COR.laranja;
+      retArred(-20, -14, 40, 28, 5); ctx.fill();
+      ctx.shadowBlur = 0; contorno();
+      ctx.fillStyle = COR.azul; ctx.fillRect(-20, -6, 40, 7);
+      ctx.save(); ctx.translate(0, 7); ctx.scale(.55, .55);
+      desenharRoda(-10, 0, 7); desenharRoda(10, 0, 7);
+      ctx.restore();
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+function desenharItem(tipo, x, y, t, escalaPop = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(escalaPop, escalaPop);
+  if (itemImg[tipo]) {
+    const tam = tipo === 'passe' ? 48 : 40;
+    if (tipo === 'passe') { ctx.shadowColor = COR.verde; ctx.shadowBlur = 14; }
+    desenharAjustado(itemImg[tipo], 0, 0, tam, tam);
+  } else {
+    itemProvisorio(tipo, t);
+  }
+  ctx.restore();
+}
+
+// ============================================================
+//  Cenário: duas camadas com parallax vertical
+// ============================================================
+let fundoOff = 0, ruaOff = 0;
+
+function tileVertical(im, x, w, off) {
+  const h = w * im.height / im.width;
+  let y = (off % h) - h;
+  for (; y < H; y += h) ctx.drawImage(im, x, y, w, h);
+}
+
+function fundoProvisorio(off) {
+  const bloco = 160;
+  ctx.fillStyle = '#26315A';
+  ctx.fillRect(0, 0, W, H);
+  const inicio = Math.floor(-off / bloco) - 1;
+  for (let k = inicio; k < inicio + H / bloco + 3; k++) {
+    const y = k * bloco + off;
+    for (const lado of [0, 1]) {
+      const x0 = lado ? RUA_X + RUA_W + 14 : 0;
+      const semente = Math.abs(Math.sin(k * 12.9898 + lado * 78.233) * 43758.5453) % 1;
+      // telhados
+      ctx.fillStyle = semente > .5 ? '#1B2440' : '#33406E';
+      ctx.fillRect(x0 + 4, y + 10, 50, bloco * 0.55);
+      ctx.fillStyle = semente > .5 ? COR.laranja : '#E4DCC8';
+      ctx.fillRect(x0 + 8, y + 16, 12, 8);
+      // árvore
+      ctx.fillStyle = '#1F8F5C';
+      ctx.beginPath(); ctx.arc(x0 + 30, y + bloco * 0.8, 17 + semente * 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = COR.verde;
+      ctx.beginPath(); ctx.arc(x0 + 26, y + bloco * 0.78, 10, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  // calçadas
+  ctx.fillStyle = '#D9D3C2';
+  ctx.fillRect(RUA_X - 14, 0, 14, H);
+  ctx.fillRect(RUA_X + RUA_W, 0, 14, H);
+}
+
+function ruaProvisoria(off) {
+  ctx.fillStyle = '#39456F';
+  ctx.fillRect(RUA_X, 0, RUA_W, H);
+  ctx.fillStyle = COR.branco;
+  ctx.fillRect(RUA_X, 0, 4, H);
+  ctx.fillRect(RUA_X + RUA_W - 4, 0, 4, H);
+  const tr = 48;
+  for (let i = 1; i < 3; i++) {
+    const x = RUA_X + FAIXA_W * i - 2;
+    for (let y = (off % tr) - tr; y < H; y += tr) ctx.fillRect(x, y, 4, 24);
+  }
+}
+
+function desenharCenario() {
+  if (img.fundo) tileVertical(img.fundo, 0, W, fundoOff);
+  else fundoProvisorio(fundoOff);
+  if (img.rua) tileVertical(img.rua, RUA_X, RUA_W, ruaOff);
+  else ruaProvisoria(ruaOff);
+}
+
+function desenharCiclovia(t, forca) {
+  if (forca <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = 0.72 * forca;
+  ctx.fillStyle = COR.verde;
+  ctx.fillRect(RUA_X, 0, RUA_W, H);
+  ctx.globalAlpha = 0.55 * forca;
+  ctx.fillStyle = COR.branco;
+  const passo = 120;
+  for (let i = 0; i < 3; i++) {
+    for (let y = (ruaOff % passo) - passo; y < H; y += passo) {
+      ctx.save();
+      ctx.translate(faixaX(i), y + (i % 2) * 60);
+      desenharRoda(-9, 0, 7); desenharRoda(9, 0, 7);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+// ============================================================
+//  Estado do jogo
+// ============================================================
+let cena = 'inicio';        // inicio | jogo | fim
+let relogio = 0;            // tempo total (animações)
+let recorde = 0;            // só na memória da sessão
+let novoRecorde = false;
+
+let restante, pontos, pontosFrac, entidades, flutuantes;
+let jogador, cicloviaT, cicloviaVisual, passesSoltos, horariosPasse;
+let proxLinha, tremor, retaFinalT, retaFinalMostrada, cicloviaTextoT;
+
+function novaPartida() {
+  restante = DURACAO;
+  pontos = 0; pontosFrac = 0;
+  entidades = []; flutuantes = [];
+  jogador = { faixa: 1, x: faixaX(1), incl: 0, estado: 'pedalar', estadoT: 0, invenc: 0 };
+  cicloviaT = 0; cicloviaVisual = 0; cicloviaTextoT = 0;
+  passesSoltos = 0;
+  // um passe em cada terço da partida, em horário aleatório
+  horariosPasse = [0, 1, 2].map(k => 6 + k * 13 + Math.random() * 6);
+  proxLinha = 0.6;
+  tremor = 0;
+  retaFinalT = 0; retaFinalMostrada = false;
+  novoRecorde = false;
+  cena = 'jogo';
+}
+
+function velocidade() {
+  const decorrido = DURACAO - restante;
+  const fator = 0.5 + 0.5 * Math.min(1, decorrido / RAMPA_ATE);
+  return VEL_MAX * fator * (cicloviaT > 0 ? CICLOVIA_VEL : 1);
+}
+
+function mudarFaixa(d) {
+  if (cena !== 'jogo') return;
+  const nova = Math.max(0, Math.min(2, jogador.faixa + d));
+  if (nova !== jogador.faixa) jogador.faixa = nova;
+}
+
+function flutuar(texto, cor, x = jogador.x, y = JOGADOR_Y - 50) {
+  flutuantes.push({ texto, cor, x, y, vida: 0.9 });
+}
+
+function mudarEstado(estado, dur) {
+  jogador.estado = estado; jogador.estadoT = dur;
+}
+
+function gerarLinha() {
+  const livres = [0, 1, 2].sort(() => Math.random() - 0.5);
+  const y = -40;
+  if (cicloviaT > 0) {
+    // ciclovia livre: só moedas
+    for (const f of livres) if (Math.random() < 0.7) entidades.push({ tipo: 'moeda', faixa: f, y });
+    return;
+  }
+  const decorrido = DURACAO - restante;
+  const nObst = Math.random() < 0.25 + decorrido / DURACAO * 0.45 ? 2 : 1; // nunca 3
+  const tiposObst = ['cone', 'buraco', 'poca'];
+  for (let i = 0; i < nObst; i++) {
+    entidades.push({ tipo: tiposObst[Math.floor(Math.random() * 3)], faixa: livres[i], y });
+  }
+  const f = livres[nObst];
+  if (f !== undefined && Math.random() < 0.75) {
+    entidades.push({ tipo: Math.random() < 0.65 ? 'moeda' : 'garrafa', faixa: f, y });
+  }
+}
+
+function soltarPasse() {
+  passesSoltos++;
+  // procura uma faixa sem obstáculo por perto do topo
+  const ocupadas = new Set(entidades.filter(e => e.y < 60 && e.tipo !== 'moeda' && e.tipo !== 'garrafa').map(e => e.faixa));
+  const opcoes = [0, 1, 2].filter(f => !ocupadas.has(f));
+  const faixa = opcoes.length ? opcoes[Math.floor(Math.random() * opcoes.length)] : 1;
+  entidades.push({ tipo: 'passe', faixa, y: -120 });
+}
+
+function atualizar(dt) {
+  relogio += dt;
+  if (cena !== 'jogo') {
+    fundoOff += 40 * dt; ruaOff += 80 * dt;
+    return;
+  }
+
+  restante -= dt;
+  if (restante <= 0) { restante = 0; terminar(); return; }
+
+  const vel = velocidade();
+  fundoOff += vel * 0.5 * dt;
+  ruaOff += vel * dt;
+
+  // timers
+  if (cicloviaT > 0) cicloviaT = Math.max(0, cicloviaT - dt);
+  cicloviaVisual += ((cicloviaT > 0 ? 1 : 0) - cicloviaVisual) * Math.min(1, dt * 6);
+  if (cicloviaTextoT > 0) cicloviaTextoT -= dt;
+  if (tremor > 0) tremor -= dt;
+  if (jogador.invenc > 0) jogador.invenc -= dt;
+  if (jogador.estadoT > 0) {
+    jogador.estadoT -= dt;
+    if (jogador.estadoT <= 0) jogador.estado = 'pedalar';
+  }
+  if (restante <= 10 && !retaFinalMostrada) { retaFinalMostrada = true; retaFinalT = 1; }
+  if (retaFinalT > 0) retaFinalT -= dt;
+
+  // pontos por pedalar
+  pontosFrac += PONTOS_SEG * (cicloviaT > 0 ? 2 : 1) * dt;
+  if (pontosFrac >= 1) { const n = Math.floor(pontosFrac); pontos += n; pontosFrac -= n; }
+
+  // movimento suave entre faixas + inclinação
+  const alvo = faixaX(jogador.faixa);
+  const antes = jogador.x;
+  jogador.x += (alvo - jogador.x) * Math.min(1, dt * 14);
+  const inclAlvo = Math.max(-0.35, Math.min(0.35, (jogador.x - antes) / Math.max(dt, 0.001) / 900));
+  jogador.incl += (inclAlvo - jogador.incl) * Math.min(1, dt * 12);
+
+  // geração
+  proxLinha -= dt;
+  if (proxLinha <= 0) {
+    gerarLinha();
+    proxLinha = (cicloviaT > 0 ? 110 : 175) / vel + 0.18;
+  }
+  const decorrido = DURACAO - restante;
+  if (passesSoltos < MAX_PASSES && decorrido >= horariosPasse[passesSoltos] && cicloviaT <= 0) soltarPasse();
+
+  // descida e colisões
+  for (const e of entidades) {
+    e.y += vel * dt;
+    if (e.pego) { e.pop += dt; continue; }
+    const perto = Math.abs(faixaX(e.faixa) - jogador.x) < FAIXA_W * 0.55;
+    const alinhado = e.y > JOGADOR_Y - 48 && e.y < JOGADOR_Y + 28;
+    if (!perto || !alinhado) continue;
+
+    if (e.tipo === 'moeda' || e.tipo === 'garrafa') {
+      const mult = cicloviaT > 0 ? 2 : 1;
+      const v = PONTOS[e.tipo] * mult;
+      pontos += v;
+      flutuar('+' + v, cicloviaT > 0 ? COR.verde : '#F5B82E', faixaX(e.faixa), e.y - 20);
+      e.pego = true; e.pop = 0;
+      if (jogador.estado !== 'ops' && cicloviaT <= 0) mudarEstado('pegar', 0.3);
+    } else if (e.tipo === 'passe') {
+      e.pego = true; e.pop = 0;
+      cicloviaT = CICLOVIA_DUR; cicloviaTextoT = 1.4;
+      // a ciclovia limpa o caminho
+      for (const o of entidades) if (['cone', 'buraco', 'poca'].includes(o.tipo) && !o.pego) { o.pego = true; o.pop = 0; o.sumir = true; }
+      flutuar('PASSE!', COR.verde);
+    } else if (cicloviaT <= 0 && jogador.invenc <= 0) {
+      pontos = Math.max(0, pontos + PONTOS.obstaculo);
+      flutuar(String(PONTOS.obstaculo), '#FF5A5A', faixaX(e.faixa), e.y - 20);
+      mudarEstado('ops', 0.6);
+      jogador.invenc = 1;
+      tremor = 0.3;
+      e.pego = true; e.pop = 0; e.bateu = true;
+    }
+  }
+  entidades = entidades.filter(e => e.y < H + 60 && !(e.pego && e.pop > 0.35));
+
+  for (const f of flutuantes) { f.y -= 55 * dt; f.vida -= dt; }
+  flutuantes = flutuantes.filter(f => f.vida > 0);
+
+  if (cicloviaT > 0) jogador.estado = jogador.estado === 'ops' ? 'ops' : 'ciclovia';
+  else if (jogador.estado === 'ciclovia') jogador.estado = 'pedalar';
+}
+
+function terminar() {
+  cena = 'fim';
+  novoRecorde = pontos > recorde;
+  if (novoRecorde) recorde = pontos;
+  montarBotoes();
+}
+
+// ============================================================
+//  Desenho
+// ============================================================
+function texto(t, x, y, tam, cor = COR.branco, alin = 'center', contornoCor = COR.azul, peso = 900) {
+  ctx.font = `${peso} ${tam}px ${FONTE}`;
+  ctx.textAlign = alin; ctx.textBaseline = 'middle';
+  if (contornoCor) {
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(3, tam * 0.18);
+    ctx.strokeStyle = contornoCor;
+    ctx.strokeText(t, x, y);
+  }
+  ctx.fillStyle = cor;
+  ctx.fillText(t, x, y);
+}
+
+function textoQuebrado(t, x, y, larg, tam, cor, alt = 1.25, peso = 700) {
+  ctx.font = `${peso} ${tam}px ${FONTE}`;
+  const palavras = t.split(' '), linhas = [];
+  let linha = '';
+  for (const p of palavras) {
+    const teste = linha ? linha + ' ' + p : p;
+    if (ctx.measureText(teste).width > larg && linha) { linhas.push(linha); linha = p; }
+    else linha = teste;
+  }
+  linhas.push(linha);
+  ctx.fillStyle = cor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  linhas.forEach((l, i) => ctx.fillText(l, x, y + (i - (linhas.length - 1) / 2) * tam * alt));
+}
+
+function desenharJogador() {
+  ctx.save();
+  ctx.translate(jogador.x, JOGADOR_Y);
+  ctx.rotate(jogador.incl);
+  if (jogador.invenc > 0 && cicloviaT <= 0 && Math.floor(relogio * 16) % 2 === 0) ctx.globalAlpha = 0.45;
+  // sombra
+  ctx.fillStyle = 'rgba(0,0,0,.25)';
+  ctx.beginPath(); ctx.ellipse(0, 40, 22, 7, 0, 0, Math.PI * 2); ctx.fill();
+  const sprite = img[jogador.estado] || img.pedalar;
+  if (sprite) {
+    if (jogador.estado === 'ciclovia') { ctx.shadowColor = COR.laranja; ctx.shadowBlur = 18; }
+    desenharAjustado(sprite, 0, -4, 112, 112);
+  } else {
+    capiCostas(jogador.estado, relogio);
+  }
+  ctx.restore();
+}
+
+function desenharHUD() {
+  texto('PONTOS: ' + pontos, 14, 30, 22, COR.branco, 'left');
+  const pisca = restante <= 10 && Math.floor(relogio * 4) % 2 === 0;
+  texto(Math.ceil(restante) + 's', W - 14, 30, 24, pisca ? COR.laranja : COR.branco, 'right');
+
+  if (cicloviaT > 0) {
+    // barra do modo ciclovia
+    const w = 150, x = W / 2 - w / 2, y = 58;
+    ctx.fillStyle = 'rgba(27,36,64,.8)'; retArred(x - 3, y - 3, w + 6, 14, 7); ctx.fill();
+    ctx.fillStyle = COR.verde; retArred(x, y, w * (cicloviaT / CICLOVIA_DUR), 8, 4); ctx.fill();
+    texto('x2', x + w + 20, y + 4, 16, COR.verde);
+  }
+  if (cicloviaTextoT > 0) {
+    const s = 1 + Math.max(0, cicloviaTextoT - 1.1) * 2;
+    ctx.save(); ctx.translate(W / 2, 200); ctx.scale(s, s);
+    texto('CICLOVIA LIBERADA!', 0, 0, 30, COR.verde);
+    ctx.restore();
+  }
+  if (retaFinalT > 0) {
+    ctx.save(); ctx.globalAlpha = Math.min(1, retaFinalT * 3);
+    texto('RETA FINAL!', W / 2, 250, 38, COR.laranja);
+    ctx.restore();
+  }
+}
+
+function desenharBordaCiclovia() {
+  if (cicloviaVisual <= 0.01) return;
+  const a = cicloviaVisual * (0.55 + 0.35 * Math.sin(relogio * 10));
+  ctx.save();
+  ctx.globalAlpha = a;
+  for (const [x, dir] of [[0, 1], [W, -1]]) {
+    const gr = ctx.createLinearGradient(x, 0, x + 26 * dir, 0);
+    gr.addColorStop(0, COR.verde); gr.addColorStop(1, 'rgba(34,181,115,0)');
+    ctx.fillStyle = gr; ctx.fillRect(dir > 0 ? 0 : W - 26, 0, 26, H);
+  }
+  for (const [y, dir] of [[0, 1], [H, -1]]) {
+    const gr = ctx.createLinearGradient(0, y, 0, y + 26 * dir);
+    gr.addColorStop(0, COR.verde); gr.addColorStop(1, 'rgba(34,181,115,0)');
+    ctx.fillStyle = gr; ctx.fillRect(0, dir > 0 ? 0 : H - 26, W, 26);
+  }
+  ctx.restore();
+}
+
+// ---------- Botões ----------
+let botoes = [];
+const ESTILO_BOTAO = [
+  { fundo: COR.laranja, texto: COR.branco, borda: COR.azul },   // JOGAR
+  { fundo: COR.azul,    texto: COR.branco, borda: COR.branco },  // JOGAR DE NOVO
+  { fundo: COR.branco,  texto: COR.azul,   borda: COR.azul },   // COMPARTILHAR
+];
+
+function montarBotoes() {
+  if (cena === 'inicio') {
+    botoes = [{ x: W / 2 - 110, y: 520, w: 220, h: 58, rotulo: 'JOGAR', sprite: 0, acao: novaPartida }];
+  } else if (cena === 'fim') {
+    botoes = [
+      { x: W / 2 - 115, y: 488, w: 230, h: 52, rotulo: 'JOGAR DE NOVO', sprite: 1, acao: novaPartida },
+      { x: W / 2 - 115, y: 550, w: 230, h: 52, rotulo: 'COMPARTILHAR', sprite: 2, acao: compartilhar },
+    ];
+  } else botoes = [];
+}
+
+function desenharBotoes() {
+  for (const b of botoes) {
+    const s = b.pressionado ? 0.95 : 1 + Math.sin(relogio * 4) * 0.015;
+    ctx.save();
+    ctx.translate(b.x + b.w / 2, b.y + b.h / 2);
+    ctx.scale(s, s);
+    if (botaoImg[b.sprite]) {
+      desenharAjustado(botaoImg[b.sprite], 0, 0, b.w, b.h + 10);
+    } else {
+      const e = ESTILO_BOTAO[b.sprite];
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; retArred(-b.w / 2, -b.h / 2 + 5, b.w, b.h, b.h / 2); ctx.fill();
+      ctx.fillStyle = e.fundo; retArred(-b.w / 2, -b.h / 2, b.w, b.h, b.h / 2); ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = e.borda; ctx.stroke();
+      texto(b.rotulo, 0, 1, b.rotulo.length > 8 ? 20 : 26, e.texto, 'center', null);
+    }
+    ctx.restore();
+  }
+}
+
+function desenharLogo(cx, cy, maxW, maxH) {
+  if (img.logo) { desenharAjustado(img.logo, cx, cy, maxW, maxH); return; }
+  const s = Math.min(1, maxH / 90);
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s);
+  texto('BORA', 0, -16, 44, COR.laranja);
+  texto('BIKE', 0, 22, 30, COR.branco);
+  ctx.save(); ctx.translate(62, 22); desenharRoda(0, 0, 10); ctx.restore();
+  ctx.restore();
+}
+
+function rodape(y) {
+  ctx.font = `600 10px ${FONTE}`;
+  ctx.fillStyle = 'rgba(242,240,234,.75)'; ctx.textAlign = 'center';
+  ctx.fillText('Jogo promocional fictício, criado com auxílio de IA', W / 2, y);
+  ctx.fillText('generativa para fins educacionais.', W / 2, y + 13);
+}
+
+function telaInicio() {
+  ctx.fillStyle = 'rgba(27,36,64,.55)'; ctx.fillRect(0, 0, W, H);
+  desenharLogo(W / 2, 78, 220, 100);
+  texto('CAPI RUSH', W / 2, 150, 34, COR.laranja);
+  texto('Ciclovia Livre', W / 2, 180, 18, COR.branco);
+
+  ctx.save(); ctx.translate(W / 2, 290);
+  if (img.parado) desenharAjustado(img.parado, 0, 0, 180, 180);
+  else { ctx.scale(0.95, 0.95); capiFrente(relogio); }
+  ctx.restore();
+
+  ctx.fillStyle = 'rgba(27,36,64,.9)'; retArred(34, 388, W - 68, 50, 14); ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = COR.laranja; ctx.stroke();
+  textoQuebrado('"Desvie, pegue o Passe e libere a ciclovia!"', W / 2, 413, W - 90, 15, COR.branco);
+
+  // legenda
+  const leg = [['moeda', '+10'], ['garrafa', '+5'], ['cone', '-15'], ['passe', 'Ciclovia']];
+  ctx.fillStyle = 'rgba(27,36,64,.9)'; retArred(24, 450, W - 48, 50, 14); ctx.fill();
+  [44, 116, 188, 252].forEach((x, i) => {
+    const [tipo, v] = leg[i];
+    ctx.save(); ctx.translate(x, 475); ctx.scale(0.62, 0.62); desenharItem(tipo, 0, 0, relogio); ctx.restore();
+    texto(v, x + 18, 476, 13, tipo === 'passe' ? COR.verde : tipo === 'cone' ? '#FF8A8A' : COR.branco, 'left', null, 800);
+  });
+
+  desenharBotoes();
+  ctx.font = `700 11px ${FONTE}`; ctx.fillStyle = COR.branco; ctx.textAlign = 'center';
+  ctx.fillText('Celular: toque nos lados ou deslize  ·  PC: ← → ou A / D', W / 2, 596);
+  if (recorde > 0) texto('Recorde da sessão: ' + recorde, W / 2, 504, 13, '#F5B82E', 'center', null, 800);
+  rodape(618);
+}
+
+function telaFim() {
+  ctx.fillStyle = 'rgba(27,36,64,.88)'; ctx.fillRect(0, 0, W, H);
+  desenharLogo(W / 2, 52, 150, 60);
+  texto('TEMPO ESGOTADO!', W / 2, 112, 22, COR.laranja);
+  const pop = 1 + Math.max(0, 0.4 - (relogio - fimInicio)) ;
+  ctx.save(); ctx.translate(W / 2, 175); ctx.scale(pop, pop);
+  texto(String(pontos), 0, 0, 72, COR.branco);
+  ctx.restore();
+  texto('PONTOS', W / 2, 222, 14, COR.branco, 'center', null, 800);
+  const msg = pontos < 150 ? 'Bora de novo?' : pontos <= 300 ? 'Mandou bem!' : 'Lenda da ciclovia!';
+  texto(msg, W / 2, 258, 26, '#F5B82E');
+  if (novoRecorde && pontos > 0) {
+    ctx.fillStyle = COR.verde; retArred(W / 2 - 100, 280, 200, 24, 12); ctx.fill();
+    texto('Novo recorde da sessão!', W / 2, 292, 13, COR.branco, 'center', null, 800);
+  }
+
+  // cupom
+  const cy = 318;
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,107,26,.12)'; retArred(26, cy, W - 52, 146, 16); ctx.fill();
+  ctx.setLineDash([7, 5]); ctx.lineWidth = 2; ctx.strokeStyle = COR.laranja; ctx.stroke();
+  ctx.restore();
+  texto('PLANO MENSAL ESTUDANTE', W / 2, cy + 22, 14, COR.laranja, 'center', null, 900);
+  textoQuebrado('Use o código no app Bora Bike e ganhe o 1º mês com desconto:', W / 2, cy + 52, W - 90, 13, COR.branco);
+  ctx.fillStyle = COR.laranja; retArred(W / 2 - 90, cy + 76, 180, 38, 10); ctx.fill();
+  texto(CODIGO, W / 2, cy + 96, 24, COR.branco, 'center', COR.azul);
+  texto('Com o plano, o caminho fica livre.', W / 2, cy + 131, 12, COR.verde, 'center', null, 800);
+
+  desenharBotoes();
+  rodape(618);
+}
+
+let fimInicio = 0;
+let cenaAnterior = '';
+
+function desenhar() {
+  ctx.save();
+  if (tremor > 0 && cena === 'jogo') ctx.translate((Math.random() - .5) * 8, (Math.random() - .5) * 8);
+  desenharCenario();
+  if (cena === 'jogo' || cena === 'fim') {
+    desenharCiclovia(relogio, cicloviaVisual);
+    for (const e of entidades) {
+      const pop = e.pego ? (e.sumir ? 1 - e.pop * 2.5 : e.bateu ? 1 : 1 + e.pop * 3) : 1;
+      if (pop <= 0) continue;
+      ctx.save();
+      if (e.pego && !e.bateu) ctx.globalAlpha = Math.max(0, 1 - e.pop / 0.35);
+      desenharItem(e.tipo, faixaX(e.faixa), e.y, relogio, pop);
+      ctx.restore();
+    }
+    desenharJogador();
+    for (const f of flutuantes) {
+      ctx.save(); ctx.globalAlpha = Math.min(1, f.vida * 2);
+      texto(f.texto, f.x, f.y, 22, f.cor);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+  if (cena === 'jogo') { desenharBordaCiclovia(); desenharHUD(); }
+  if (cena === 'inicio') telaInicio();
+  if (cena === 'fim') telaFim();
+}
+
+// ============================================================
+//  Entrada: toque, deslize, mouse e teclado
+// ============================================================
+function paraLogico(ev) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
+}
+
+let toque = null;
+canvas.addEventListener('pointerdown', ev => {
+  ev.preventDefault();
+  const p = paraLogico(ev);
+  if (cena === 'jogo') {
+    toque = { x0: p.x, y0: p.y, moveu: false };
+    return;
+  }
+  for (const b of botoes) {
+    if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
+      b.pressionado = true;
+      setTimeout(() => { b.pressionado = false; b.acao(); montarBotoes(); }, 90);
+      return;
+    }
+  }
+});
+canvas.addEventListener('pointermove', ev => {
+  if (!toque || cena !== 'jogo') return;
+  ev.preventDefault();
+  const p = paraLogico(ev);
+  const dx = p.x - toque.x0;
+  if (!toque.moveu && Math.abs(dx) > 28) {
+    mudarFaixa(Math.sign(dx));
+    toque.moveu = true;
+  }
+});
+canvas.addEventListener('pointerup', ev => {
+  if (!toque || cena !== 'jogo') { toque = null; return; }
+  if (!toque.moveu) mudarFaixa(toque.x0 < W / 2 ? -1 : 1);
+  toque = null;
+});
+canvas.addEventListener('pointercancel', () => { toque = null; });
+canvas.addEventListener('contextmenu', ev => ev.preventDefault());
+
+window.addEventListener('keydown', ev => {
+  const k = ev.key.toLowerCase();
+  if (k === 'arrowleft' || k === 'a') { mudarFaixa(-1); ev.preventDefault(); }
+  else if (k === 'arrowright' || k === 'd') { mudarFaixa(1); ev.preventDefault(); }
+  else if ((k === 'enter' || k === ' ') && cena !== 'jogo') { novaPartida(); montarBotoes(); ev.preventDefault(); }
+});
+
+// ---------- Compartilhar (só copia um texto; nenhum dado é coletado) ----------
+function avisar(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(avisar.id); avisar.id = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+async function compartilhar() {
+  const txt = `Fiz ${pontos} pontos no Capi Rush! Consegue me passar? ${location.href.startsWith('http') ? location.href : ''}`.trim();
+  try {
+    await navigator.clipboard.writeText(txt);
+    avisar('Copiado! Cola onde quiser 🚲');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); avisar('Copiado! Cola onde quiser 🚲'); }
+    catch (e2) { avisar(txt); }
+    ta.remove();
+  }
+}
+
+// ============================================================
+//  Laço principal
+// ============================================================
+let ultimo = performance.now();
+function laco(agora) {
+  const dt = Math.min(0.05, (agora - ultimo) / 1000);
+  ultimo = agora;
+  if (cena !== cenaAnterior) {
+    if (cena === 'fim') fimInicio = relogio;
+    cenaAnterior = cena;
+    montarBotoes();
+  }
+  atualizar(dt);
+  desenhar();
+  requestAnimationFrame(laco);
+}
+
+carregarTudo().then(() => {
+  montarBotoes();
+  requestAnimationFrame(t => { ultimo = t; laco(t); });
+});
+</script>
+</body>
+</html>
