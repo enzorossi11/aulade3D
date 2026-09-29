@@ -1,51 +1,40 @@
-# Capi Rush: Ciclovia Livre 🚲 — advergame Bora Bike
+# Capi Rush: Ciclovia Livre
 
-Prática 02 de Modelagem e Animação 3D (FMU): um advergame do briefing ao jogo jogável no navegador.
+Advergame da Prática 02 de Modelagem e Animação 3D, feito para o briefing 8 da lista: Bora Bike, aluguel de bicicletas, campanha do plano mensal para estudantes.
 
-**▶️ Jogar:** https://enzorossi11.github.io/aulade3D/game/
+Link do jogo: https://enzorossi11.github.io/aulade3D/game/
 
-A Capi, uma capivara estudante (sempre de capacete), pedala por uma rua de 3 faixas desviando de cones, buracos e poças. Ao pegar o **Passe Mensal**, a rua vira **ciclovia livre** por 5 s: sem obstáculos, mais rápida e com pontos em dobro. A tela final entrega o código fictício **BORAPEDALA** para o Plano Mensal Estudante.
+![Key art do jogo](divulgacao/divulgacao_keyart_v01.png)
 
-![Key art](divulgacao/divulgacao_keyart_v01.png)
+## A ideia
 
-## Estrutura
+Eu queria um jogo simples de entender logo de cara, e lembrei daqueles jogos antigos de carro em que você fica desviando dos outros carros que vêm descendo pela tela. Troquei o carro por uma bike e os carros por cones, buracos e poças, porque o briefing não deixa mostrar o ciclista em situação de risco no trânsito.
 
-```
-briefing/   briefing_bora-bike.md, conceitos_v01.md
-docs/       mini-gdd_v01.md, relatorio_final.md
-prompts/    ficha_mascote_capi.md, log_de_prompts.md
-assets/     model sheet, 5 estados da mascote, cenário (2 camadas), itens, logo, botões
-            _fonte_svg/  código-fonte vetorial da arte (SVG) + script de exportação
-game/       index.html (o jogo), link_do_jogo.txt, prints/
-divulgacao/ divulgacao_keyart_v01.png (4:5)
-```
+A mascote é a Capi, uma capivara universitária que está sempre de capacete (outra exigência do briefing). Escolhi capivara porque é o bicho mais "paulistano" que existe e combina com o tom leve que a marca pede.
 
-## Checklist de entrega
+O produto entra no jogo como power-up: de vez em quando cai um Passe Mensal, e quem pega libera a ciclovia por 5 segundos. A rua fica verde, os obstáculos somem e os pontos dobram. É a promessa do plano ("com o plano o caminho fica livre") virando mecânica, o que dá o nível demonstrativo de integração.
 
-| Entregável | Status |
-|---|---|
-| Mini-GDD (9 seções) | ✅ |
-| Ficha + model sheet (4 vistas) | ✅ |
-| Estados da mascote (5, incluindo o do power-up) | ✅ |
-| Cenário (2 camadas, paleta da marca) | ✅ |
-| Jogo: celular, até 60 s, tela final com CTA e declaração de IA | ✅ |
-| Key art 4:5 com título e logo | ✅ |
-| Prints (inicial, gameplay, final) | ✅ |
-| Relatório final | ⏳ falta o teste com 2 pessoas |
-| Link publicado (GitHub Pages) | ⏳ ativar em Settings → Pages |
-| Teaser em vídeo (opcional) | — |
+A partida dura 45 segundos. No celular você toca nos lados da tela ou arrasta o dedo, e no computador usa as setas. No final aparece a pontuação e o código BORAPEDALA para usar no app (o código é fictício).
 
-## Rodar localmente
+## Onde está cada coisa
+
+- `briefing/`: o briefing da Bora Bike e os 3 conceitos que considerei
+- `docs/`: mini-GDD e relatório final
+- `prompts/`: ficha da mascote e log de prompts
+- `assets/`: model sheet, estados da Capi, cenário, itens, logo e botões. A arte foi feita em vetor, e os arquivos-fonte estão em `assets/_fonte_svg/`
+- `game/`: o jogo (`index.html`), o link e os prints
+- `divulgacao/`: key art 4:5
+
+## Para rodar sem internet
+
+Precisa abrir por um servidor local, senão o navegador bloqueia o carregamento das imagens:
+
 ```
 python3 -m http.server
-# abrir http://localhost:8000/game/
 ```
 
-## Regerar a arte
-```
-npm i -g playwright && npm pack @fontsource/fredoka && tar xzf fontsource-fredoka-*.tgz
-FREDOKA=package/files/fredoka-latin-700-normal.woff2 node assets/_fonte_svg/renderizar.mjs
-```
+Depois é só abrir `http://localhost:8000/game/` no navegador.
 
 ---
-*Jogo promocional fictício, criado com auxílio de IA generativa para fins educacionais. Fonte Fredoka sob SIL Open Font License.*
+
+Bora Bike e o código promocional são fictícios, criados para fins educacionais, com auxílio de IA generativa, conforme a declaração no relatório. Fonte Fredoka, licença SIL Open Font License.
