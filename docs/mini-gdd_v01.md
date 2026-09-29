@@ -70,6 +70,6 @@ Os PNGs desta entrega já saem com fundo transparente. O jogo também aceita spr
 - Nenhuma situação de risco no trânsito (sem carros disputando faixa, sem furar sinal).
 - Não infantil; humor urbano de estudante.
 - Não pede nome, e-mail nem nenhum dado; recorde só na memória da sessão.
-- Sem sons ou imagens externas.
+- Sem sons ou imagens externas: a música e os efeitos são sintetizados no próprio código (Web Audio), sem arquivos de áudio. Botão de som na tela (tecla M no computador).
 - Rodapé: "Jogo promocional fictício, criado com auxílio de IA generativa para fins educacionais."
 - Código **BORAPEDALA** é fictício.

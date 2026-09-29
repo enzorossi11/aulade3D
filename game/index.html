@@ -466,6 +466,126 @@ function desenharCiclovia(t, forca) {
   ctx.restore();
 }
 
+
+// ============================================================
+//  Sons: tudo sintetizado aqui mesmo com Web Audio (sem arquivos externos)
+// ============================================================
+const Som = (() => {
+  let ac = null, mestre = null, busMusica = null, ruidoBuf = null;
+  let mudo = false, musicaLigada = false, rapido = false;
+  let passo = 0, proxNota = 0, relogioMusica = null;
+  const midi = m => 440 * Math.pow(2, (m - 69) / 12);
+
+  function iniciar() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ac = new AC();
+      mestre = ac.createGain(); mestre.gain.value = 0.55; mestre.connect(ac.destination);
+      busMusica = ac.createGain(); busMusica.gain.value = 0.2; busMusica.connect(mestre);
+      ruidoBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+      const d = ruidoBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (ac.state === 'suspended' && !mudo) ac.resume();
+  }
+  const ok = () => ac && !mudo;
+
+  function tom(freq, dur, { tipo = 'square', vol = 0.15, em = 0, ate = null, saida = mestre } = {}) {
+    const t = ac.currentTime + em;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = tipo;
+    o.frequency.setValueAtTime(freq, t);
+    if (ate) o.frequency.exponentialRampToValueAtTime(ate, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(saida);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+
+  function ruido(dur, { vol = 0.2, em = 0, filtro = 'bandpass', freq = 2000, saida = mestre } = {}) {
+    const t = ac.currentTime + em;
+    const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = ruidoBuf;
+    f.type = filtro; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(saida);
+    src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02);
+  }
+
+  // ---------- música: batida urbana em Dó (C, G, Am, F) ----------
+  const ACORDES = [
+    { baixo: 36, arp: [60, 64, 67, 72] },
+    { baixo: 43, arp: [59, 62, 67, 71] },
+    { baixo: 45, arp: [60, 64, 69, 72] },
+    { baixo: 41, arp: [60, 65, 69, 72] },
+  ];
+  const duracaoPasso = () => 60 / (rapido ? 138 : 112) / 2;
+
+  function agendarPasso(n, quando) {
+    const em = quando - ac.currentTime;
+    const c = ACORDES[Math.floor(n / 8) % 4], b = n % 8;
+    if (b === 0 || b === 4) tom(150, 0.16, { tipo: 'sine', vol: 0.9, em, ate: 45, saida: busMusica });  // bumbo
+    if (b === 2 || b === 6) ruido(0.12, { vol: 0.35, em, freq: 1800, saida: busMusica });              // caixa
+    if (b % 2 === 1 || rapido) ruido(0.04, { vol: 0.12, em, filtro: 'highpass', freq: 7000, saida: busMusica }); // chimbal
+    if (b === 0 || b === 3 || b === 4 || b === 6) tom(midi(c.baixo), duracaoPasso() * 0.9, { tipo: 'triangle', vol: 0.55, em, saida: busMusica });
+    if (b % 2 === 0) tom(midi(c.arp[(b / 2) % 4] + (rapido ? 12 : 0)), duracaoPasso() * 0.8, { tipo: rapido ? 'square' : 'triangle', vol: rapido ? 0.1 : 0.16, em, saida: busMusica });
+  }
+
+  function sequenciador() {
+    if (!ac || !musicaLigada) return;
+    while (proxNota < ac.currentTime + 0.12) {
+      agendarPasso(passo, proxNota);
+      proxNota += duracaoPasso();
+      passo = (passo + 1) % 32;
+    }
+  }
+
+  return {
+    iniciar,
+    get mudo() { return mudo; },
+    alternarMudo() {
+      mudo = !mudo;
+      if (ac) mudo ? ac.suspend() : ac.resume();
+    },
+    musica(ligar) {
+      musicaLigada = ligar;
+      if (!ac) return;
+      if (ligar) {
+        passo = 0; proxNota = ac.currentTime + 0.05;
+        clearInterval(relogioMusica); relogioMusica = setInterval(sequenciador, 25);
+      } else clearInterval(relogioMusica);
+    },
+    ritmo(r) { rapido = r; },
+    pausarAba(oculta) { if (ac && !mudo) oculta ? ac.suspend() : ac.resume(); },
+    moeda() { if (!ok()) return; tom(988, 0.07, { vol: 0.12 }); tom(1319, 0.14, { vol: 0.12, em: 0.06 }); },
+    garrafa() { if (!ok()) return; tom(523, 0.08, { tipo: 'triangle', vol: 0.25 }); tom(784, 0.12, { tipo: 'triangle', vol: 0.25, em: 0.06 }); },
+    faixa() { if (!ok()) return; ruido(0.07, { vol: 0.06, filtro: 'highpass', freq: 3500 }); },
+    batida() {
+      if (!ok()) return;
+      ruido(0.25, { vol: 0.5, filtro: 'lowpass', freq: 900 });
+      tom(180, 0.28, { tipo: 'sawtooth', vol: 0.18, ate: 55 });
+    },
+    passe() {
+      if (!ok()) return;
+      // campainha de bike (trim-trim) + subida
+      for (const em of [0, 0.13]) { tom(2093, 0.18, { tipo: 'sine', vol: 0.18, em }); tom(2637, 0.14, { tipo: 'sine', vol: 0.1, em }); }
+      [60, 64, 67, 72, 76].forEach((m, i) => tom(midi(m + 12), 0.12, { vol: 0.09, em: 0.3 + i * 0.06 }));
+    },
+    tique() { if (!ok()) return; tom(1760, 0.04, { tipo: 'sine', vol: 0.12 }); },
+    retaFinal() { if (!ok()) return; tom(880, 0.1, { vol: 0.1 }); tom(880, 0.1, { vol: 0.1, em: 0.14 }); tom(1175, 0.2, { vol: 0.1, em: 0.28 }); },
+    fim(boa) {
+      if (!ok()) return;
+      const notas = boa ? [72, 76, 79, 84] : [67, 64, 60];
+      notas.forEach((m, i) => tom(midi(m), i === notas.length - 1 ? 0.45 : 0.14, { tipo: 'triangle', vol: 0.3, em: i * 0.13 }));
+    },
+    clique() { if (!ok()) return; tom(660, 0.05, { tipo: 'triangle', vol: 0.2 }); },
+  };
+})();
+document.addEventListener('visibilitychange', () => Som.pausarAba(document.hidden));
+
 // ============================================================
 //  Estado do jogo
 // ============================================================
@@ -476,7 +596,7 @@ let novoRecorde = false;
 
 let restante, pontos, pontosFrac, entidades, flutuantes;
 let jogador, cicloviaT, cicloviaVisual, passesSoltos, horariosPasse;
-let proxLinha, tremor, retaFinalT, retaFinalMostrada, cicloviaTextoT;
+let proxLinha, tremor, retaFinalT, retaFinalMostrada, cicloviaTextoT, ultimoTique;
 
 function novaPartida() {
   restante = DURACAO;
@@ -491,7 +611,10 @@ function novaPartida() {
   tremor = 0;
   retaFinalT = 0; retaFinalMostrada = false;
   novoRecorde = false;
+  ultimoTique = DURACAO;
   cena = 'jogo';
+  Som.ritmo(false);
+  Som.musica(true);
 }
 
 function velocidade() {
@@ -503,7 +626,7 @@ function velocidade() {
 function mudarFaixa(d) {
   if (cena !== 'jogo') return;
   const nova = Math.max(0, Math.min(2, jogador.faixa + d));
-  if (nova !== jogador.faixa) jogador.faixa = nova;
+  if (nova !== jogador.faixa) { jogador.faixa = nova; Som.faixa(); }
 }
 
 function flutuar(texto, cor, x = jogador.x, y = JOGADOR_Y - 50) {
@@ -558,7 +681,10 @@ function atualizar(dt) {
   ruaOff += vel * dt;
 
   // timers
-  if (cicloviaT > 0) cicloviaT = Math.max(0, cicloviaT - dt);
+  if (cicloviaT > 0) {
+    cicloviaT = Math.max(0, cicloviaT - dt);
+    if (cicloviaT === 0) Som.ritmo(false);
+  }
   cicloviaVisual += ((cicloviaT > 0 ? 1 : 0) - cicloviaVisual) * Math.min(1, dt * 6);
   if (cicloviaTextoT > 0) cicloviaTextoT -= dt;
   if (tremor > 0) tremor -= dt;
@@ -567,7 +693,8 @@ function atualizar(dt) {
     jogador.estadoT -= dt;
     if (jogador.estadoT <= 0) jogador.estado = 'pedalar';
   }
-  if (restante <= 10 && !retaFinalMostrada) { retaFinalMostrada = true; retaFinalT = 1; }
+  if (restante <= 10 && !retaFinalMostrada) { retaFinalMostrada = true; retaFinalT = 1; Som.retaFinal(); }
+  if (restante <= 5 && Math.ceil(restante) < ultimoTique) { ultimoTique = Math.ceil(restante); Som.tique(); }
   if (retaFinalT > 0) retaFinalT -= dt;
 
   // pontos por pedalar
@@ -604,6 +731,7 @@ function atualizar(dt) {
       pontos += v;
       flutuar('+' + v, cicloviaT > 0 ? COR.verde : '#F5B82E', faixaX(e.faixa), e.y - 20);
       e.pego = true; e.pop = 0;
+      e.tipo === 'moeda' ? Som.moeda() : Som.garrafa();
       if (jogador.estado !== 'ops' && cicloviaT <= 0) mudarEstado('pegar', 0.3);
     } else if (e.tipo === 'passe') {
       e.pego = true; e.pop = 0;
@@ -611,12 +739,14 @@ function atualizar(dt) {
       // a ciclovia limpa o caminho
       for (const o of entidades) if (['cone', 'buraco', 'poca'].includes(o.tipo) && !o.pego) { o.pego = true; o.pop = 0; o.sumir = true; }
       flutuar('PASSE!', COR.verde);
+      Som.passe(); Som.ritmo(true);
     } else if (cicloviaT <= 0 && jogador.invenc <= 0) {
       pontos = Math.max(0, pontos + PONTOS.obstaculo);
       flutuar(String(PONTOS.obstaculo), '#FF5A5A', faixaX(e.faixa), e.y - 20);
       mudarEstado('ops', 0.6);
       jogador.invenc = 1;
       tremor = 0.3;
+      Som.batida();
       e.pego = true; e.pop = 0; e.bateu = true;
     }
   }
@@ -633,6 +763,8 @@ function terminar() {
   cena = 'fim';
   novoRecorde = pontos > recorde;
   if (novoRecorde) recorde = pontos;
+  Som.musica(false);
+  Som.fim(pontos >= 150);
   montarBotoes();
 }
 
@@ -727,6 +859,32 @@ function desenharBordaCiclovia() {
   ctx.restore();
 }
 
+// ---------- Botão de som ----------
+function areaSom() {
+  return cena === 'jogo' ? { x: W / 2 - 17, y: 13, w: 34, h: 34 } : { x: W - 46, y: 12, w: 34, h: 34 };
+}
+function desenharBotaoSom() {
+  const a = areaSom(), cx = a.x + a.w / 2, cy = a.y + a.h / 2;
+  ctx.save();
+  ctx.fillStyle = 'rgba(27,36,64,.7)';
+  ctx.beginPath(); ctx.arc(cx, cy, 17, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = COR.branco; ctx.stroke();
+  ctx.fillStyle = COR.branco;
+  ctx.beginPath();
+  ctx.moveTo(cx - 9, cy - 4); ctx.lineTo(cx - 5, cy - 4); ctx.lineTo(cx + 1, cy - 9);
+  ctx.lineTo(cx + 1, cy + 9); ctx.lineTo(cx - 5, cy + 4); ctx.lineTo(cx - 9, cy + 4);
+  ctx.closePath(); ctx.fill();
+  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  if (Som.mudo) {
+    ctx.strokeStyle = COR.laranja;
+    ctx.beginPath(); ctx.moveTo(cx + 4, cy - 5); ctx.lineTo(cx + 11, cy + 5); ctx.moveTo(cx + 11, cy - 5); ctx.lineTo(cx + 4, cy + 5); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.arc(cx + 2, cy, 5, -0.9, 0.9); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + 2, cy, 9, -0.9, 0.9); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 // ---------- Botões ----------
 let botoes = [];
 const ESTILO_BOTAO = [
@@ -808,7 +966,7 @@ function telaInicio() {
 
   desenharBotoes();
   ctx.font = `700 11px ${FONTE}`; ctx.fillStyle = COR.branco; ctx.textAlign = 'center';
-  ctx.fillText('Celular: toque nos lados ou deslize  ·  PC: ← → ou A / D', W / 2, 596);
+  ctx.fillText('Celular: toque nos lados ou deslize  ·  PC: ← → (M: som)', W / 2, 596);
   if (recorde > 0) texto('Recorde da sessão: ' + recorde, W / 2, 504, 13, '#F5B82E', 'center', null, 800);
   rodape(618);
 }
@@ -873,6 +1031,7 @@ function desenhar() {
   if (cena === 'jogo') { desenharBordaCiclovia(); desenharHUD(); }
   if (cena === 'inicio') telaInicio();
   if (cena === 'fim') telaFim();
+  desenharBotaoSom();
 }
 
 // ============================================================
@@ -886,7 +1045,13 @@ function paraLogico(ev) {
 let toque = null;
 canvas.addEventListener('pointerdown', ev => {
   ev.preventDefault();
+  Som.iniciar(); // o navegador só libera áudio depois de um toque/clique
   const p = paraLogico(ev);
+  const s = areaSom();
+  if (p.x >= s.x - 6 && p.x <= s.x + s.w + 6 && p.y >= s.y - 6 && p.y <= s.y + s.h + 6) {
+    Som.alternarMudo();
+    return;
+  }
   if (cena === 'jogo') {
     toque = { x0: p.x, y0: p.y, moveu: false };
     return;
@@ -894,6 +1059,7 @@ canvas.addEventListener('pointerdown', ev => {
   for (const b of botoes) {
     if (p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h) {
       b.pressionado = true;
+      Som.clique();
       setTimeout(() => { b.pressionado = false; b.acao(); montarBotoes(); }, 90);
       return;
     }
@@ -919,6 +1085,8 @@ canvas.addEventListener('contextmenu', ev => ev.preventDefault());
 
 window.addEventListener('keydown', ev => {
   const k = ev.key.toLowerCase();
+  Som.iniciar();
+  if (k === 'm') { Som.alternarMudo(); return; }
   if (k === 'arrowleft' || k === 'a') { mudarFaixa(-1); ev.preventDefault(); }
   else if (k === 'arrowright' || k === 'd') { mudarFaixa(1); ev.preventDefault(); }
   else if ((k === 'enter' || k === ' ') && cena !== 'jogo') { novaPartida(); montarBotoes(); ev.preventDefault(); }
