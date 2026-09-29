@@ -34,7 +34,3 @@ python3 -m http.server
 ```
 
 Depois é só abrir `http://localhost:8000/game/` no navegador.
-
----
-
-Bora Bike e o código promocional são fictícios, criados para fins educacionais, com auxílio de IA generativa, conforme a declaração no relatório. Fonte Fredoka, licença SIL Open Font License.
